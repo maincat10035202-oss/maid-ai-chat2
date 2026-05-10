@@ -5,24 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AIチャット</title>
   <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background: #e5ddd5;
+    body { margin: 0; font-family: sans-serif; background: #e5ddd5; }
+    header { background: #06c755; color: white; padding: 14px; text-align: center; font-weight: bold; }
+
+    .character-area {
+      text-align: center;
+      background: #f7f7f7;
+      padding: 10px;
     }
 
-    header {
-      background: #06c755;
-      color: white;
-      padding: 14px;
-      text-align: center;
-      font-weight: bold;
-    }
+    #emotionImage { width: 160px; }
+    #emotion { font-size: 14px; color: #555; }
 
     #chat {
       padding: 15px;
-      height: calc(100vh - 120px);
+      padding-bottom: 90px;
+      height: calc(100vh - 260px);
       overflow-y: auto;
+      box-sizing: border-box;
     }
 
     .message {
@@ -34,15 +34,8 @@
       white-space: pre-wrap;
     }
 
-    .user {
-      background: #9fe870;
-      margin-left: auto;
-    }
-
-    .ai {
-      background: white;
-      margin-right: auto;
-    }
+    .user { background: #9fe870; margin-left: auto; }
+    .ai { background: white; margin-right: auto; }
 
     .input-area {
       display: flex;
@@ -75,28 +68,14 @@
 </head>
 <body>
 
-  <div id="emotion">表情: normal</div>
-
 <header>AIチャット</header>
 
+<div class="character-area">
+  <img id="emotionImage" src="/images/normal.png">
+  <div id="emotion">表情: normal</div>
+</div>
+
 <div id="chat"></div>
-
-let reply = data.reply;
-
-// 感情タグを取り出す
-let emotion = "normal";
-const match = reply.match(/^\[(normal|happy|shy|sad|angry|thinking)\]\s*/);
-
-if (match) {
-  emotion = match[1];
-  reply = reply.replace(match[0], "");
-}
-
-// 表情表示を変える
-document.getElementById("emotionImage").src = "/images/" + emotion + ".png";
-
-// 返信を表示
-loading.textContent = "メイド: " + reply;
 
 <div class="input-area">
   <input id="messageInput" placeholder="メッセージを入力">
@@ -104,14 +83,34 @@ loading.textContent = "メイド: " + reply;
 </div>
 
 <script>
+window.onload = function() {
+  const savedChat = localStorage.getItem("maidChatHistory");
+  if (savedChat) {
+    document.getElementById("chat").innerHTML = savedChat;
+  }
+};
+
 async function sendMessage() {
-  const input = document.getElementById("messageInput") || document.getElementById("message");
+  const input = document.getElementById("messageInput");
   const chat = document.getElementById("chat");
   const message = input.value.trim();
 
   if (!message) return;
 
-  chat.innerHTML += `<div class="message user">あなた: ${message}</div>`;
+  if (message.includes("私の名前は") || message.includes("僕の名前は")) {
+    let name = message
+      .replace("私の名前は", "")
+      .replace("僕の名前は", "")
+      .trim();
+
+    localStorage.setItem("userName", name);
+  }
+
+  const userDiv = document.createElement("div");
+  userDiv.className = "message user";
+  userDiv.textContent = message;
+  chat.appendChild(userDiv);
+
   input.value = "";
 
   const loading = document.createElement("div");
@@ -119,17 +118,39 @@ async function sendMessage() {
   loading.textContent = "考え中...";
   chat.appendChild(loading);
 
-  
+  chat.scrollTop = chat.scrollHeight;
 
   try {
     const res = await fetch("/chat", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({message: message})
+      body: JSON.stringify({
+        message: message,
+        userName: localStorage.getItem("userName")
+      })
     });
 
     const data = await res.json();
-    loading.textContent = "AI: " + data.reply;
+
+    let reply = data.reply.trim();
+    let emotion = "normal";
+
+    const match = reply.match(/\[(normal|happy|shy|sad|angry|thinking)\]/);
+
+    if (match) {
+      emotion = match[1];
+      reply = reply.replace(match[0], "").trim();
+    }
+
+    if (emotion === "thinking") {
+      emotion = "normal";
+    }
+
+    document.getElementById("emotion").textContent = "表情: " + emotion;
+    document.getElementById("emotionImage").src = "/images/" + emotion + ".png";
+
+    loading.textContent = reply;
+    localStorage.setItem("maidChatHistory", chat.innerHTML);
 
   } catch (error) {
     loading.textContent = "エラー: " + error;

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIチャット</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #e5ddd5;
+    }
+
+    header {
+      background: #06c755;
+      color: white;
+      padding: 14px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    #chat {
+      padding: 15px;
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 10px 14px;
+      margin: 8px 0;
+      border-radius: 16px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .user {
+      background: #9fe870;
+      margin-left: auto;
+    }
+
+    .ai {
+      background: white;
+      margin-right: auto;
+    }
+
+    .input-area {
+      display: flex;
+      padding: 10px;
+      background: white;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      font-size: 16px;
+    }
+
+    button {
+      margin-left: 8px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 20px;
+      background: #06c755;
+      color: white;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="emotion">表情: normal</div>
+
+<header>AIチャット</header>
+
+<div id="chat"></div>
+
+let reply = data.reply;
+
+// 感情タグを取り出す
+let emotion = "normal";
+const match = reply.match(/^\[(normal|happy|shy|sad|angry|thinking)\]\s*/);
+
+if (match) {
+  emotion = match[1];
+  reply = reply.replace(match[0], "");
+}
+
+// 表情表示を変える
+document.getElementById("emotion").textContent = "表情: " + emotion;
+
+// 返信を表示
+loading.textContent = "メイド: " + reply;
+
+<div class="input-area">
+  <input id="messageInput" placeholder="メッセージを入力">
+  <button onclick="sendMessage()">送信</button>
+</div>
+
+<script>
+async function sendMessage() {
+  const input = document.getElementById("messageInput") || document.getElementById("message");
+  const chat = document.getElementById("chat");
+  const message = input.value.trim();
+
+  if (!message) return;
+
+  chat.innerHTML += `<div class="message user">あなた: ${message}</div>`;
+  input.value = "";
+
+  const loading = document.createElement("div");
+  loading.className = "message ai";
+  loading.textContent = "考え中...";
+  chat.appendChild(loading);
+
+  
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({message: message})
+    });
+
+    const data = await res.json();
+    loading.textContent = "AI: " + data.reply;
+
+  } catch (error) {
+    loading.textContent = "エラー: " + error;
+  }
+
+  chat.scrollTop = chat.scrollHeight;
+}
+</script>
+
+</body>
+</html>
